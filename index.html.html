@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 방역 현장 통합 관리 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; margin: 15px; background-color: #f5f7fa; color: #111; font-size: 18px; }
+        
+        .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { color: #1e3a8a; font-size: 28px; margin: 0; }
+        h3 { font-size: 22px; margin-top: 0; color: #222; }
+        
+        .btn-danger-mini { background-color: #cbd5e1; color: #64748b; padding: 4px 8px; font-size: 13px; font-weight: normal; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; }
+        .btn-danger-mini:hover { background-color: #ef4444; color: white; }
+
+        .section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        
+        .toggle-title-container { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .toggle-title-container h3 { margin: 0; }
+        .btn-toggle-view { background-color: #f1f5f9; border: 2px solid #cbd5e1; color: #334155; padding: 6px 14px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 18px; color: #444; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; font-size: 18px; border: 2px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+        
+        .pest-group { display: flex; flex-wrap: wrap; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 2px solid #cbd5e1; align-items: center; }
+        .pest-item { display: flex; align-items: center; gap: 8px; font-size: 19px; font-weight: bold; cursor: pointer; }
+        .pest-item input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
+        #pestOtherText { width: 200px; padding: 8px 12px; font-size: 17px; border: 2px solid #0284c7; border-radius: 6px; display: none; }
+
+        .btn { padding: 12px 20px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; display: block; width: 100%; text-align: center; box-sizing: border-box; }
+        .btn-blue { background-color: #0284c7; color: white; font-size: 20px; margin-top: 15px; }
+        .btn-orange-submit { background-color: #ea580c; color: white; font-size: 20px; margin-top: 15px; }
+        .btn-green { background-color: #22c55e; color: white; font-size: 20px; margin-bottom: 15px; }
+        .btn-map { background-color: #6366f1; color: white; font-size: 20px; margin-bottom: 15px; }
+        .btn-orange { background-color: #f97316; color: white; font-size: 18px; margin-bottom: 15px; }
+        .btn-template { background-color: #0f172a; color: white; font-size: 16px; margin-bottom: 10px; width: auto; display: inline-block; padding: 8px 16px; }
+        .btn-action { background-color: #10b981; color: white; padding: 8px 15px; font-size: 18px; display: inline-block; width: auto; margin-right: 2px; }
+        .btn-edit { background-color: #64748b; color: white; padding: 8px 15px; font-size: 18px; display: inline-block; width: auto; border-radius: 8px; font-weight: bold; border:none; cursor:pointer; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 16px; min-width: 1000px; }
+        th, td { border: 2px solid #dee2e6; padding: 12px; text-align: left; }
+        th { background-color: #f1f5f9; color: #1e293b; }
+        
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: bold; display: inline-block; }
+        .badge-wait { background-color: #fef08a; color: #854d0e; }
+        .badge-done { background-color: #bbf7d0; color: #166534; }
+        .badge-dong { background-color: #e0f2fe; color: #0369a1; font-size: 14px; }
+        .pest-tag { background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 13px; margin-right: 3px; display: inline-block; }
+        
+        .map-btn { background-color: #e2e8f0; color: #1e40af; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px; border: 1px solid #cbd5e1; display: inline-block; margin-top: 5px; }
+        #multiMap { width: 100%; height: 500px; margin-top: 15px; border-radius: 8px; border: 2px solid #6366f1; display: none; }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+        .manual-status-group { background-color: #f8fafc; border: 1px dashed #0284c7; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        
+        .filter-dashboard { background-color: #f1f5f9; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .filter-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .count-badge { background-color: #1e3a8a; color: white; padding: 4px 10px; border-radius: 20px; font-size: 16px; font-weight: bold; }
+
+        @media screen and (max-width: 768px) {
+            .responsive-table-wrapper { overflow-x: visible !important; }
+            table { min-width: auto !important; border: none !important; width: 100% !important; }
+            thead { display: none !important; }
+            tbody tr { display: block !important; background: white !important; margin-bottom: 20px !important; border: 2px solid #cbd5e1 !important; border-radius: 12px !important; padding: 15px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; }
+            tbody td { display: flex !important; align-items: center; border: none !important; padding: 8px 0 !important; text-align: left !important; font-size: 17px !important; border-bottom: 1px dashed #f1f5f9 !important; flex-wrap: wrap; }
+            tbody td:last-child { border-bottom: none !important; }
+            tbody td::before { content: attr(data-label); font-weight: bold !important; color: #64748b !important; min-width: 90px !important; display: inline-block !important; font-size: 15px !important; }
+            tbody td[data-label="방역주소"] { display: block !important; }
+            tbody td[data-label="방역주소"]::before { content: "방역주소" !important; font-weight: bold !important; color: #64748b !important; min-width: 90px !important; display: inline-block !important; font-size: 15px !important; margin-bottom: 5px; }
+            .map-btn { display: block !important; text-align: center !important; width: 100% !important; margin-top: 8px !important; padding: 10px !important; box-sizing: border-box !important; font-size: 16px !important; }
+            tbody td[data-label="관리"] { display: flex !important; justify-content: space-between !important; gap: 10px !important; padding-top: 15px !important; margin-top: 5px !important; }
+            tbody td[data-label="관리"]::before { display: none !important; }
+            .btn-action, .btn-edit { flex: 1 !important; width: auto !important; display: block !important; padding: 14px !important; font-size: 19px !important; border-radius: 8px !important; font-weight: bold !important; text-align: center !important; height: auto !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>🛡️ 스마트 방역 현장 통합 관리 시스템</h1>
+        <button class="btn-danger-mini" onclick="clearAllData()">초기화(데이터전체삭제)</button>
+    </div>
+    
+    <div class="section" style="background-color: #eff6ff; border: 2px solid #bfdbfe;">
+        <h3>👤 [1단계] 오늘 현장 담당 설정</h3>
+        <div class="form-group">
+            <label>우리 팀 이름</label>
+            <input type="text" id="teamName" placeholder="예: 방역 1팀">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>방역 완료자 이름 (현장 작업자)</label>
+            <input type="text" id="todayOperator" placeholder="예: 홍길동">
+        </div>
+    </div>
+
+    <div class="section" style="background-color: #fff7ed; border: 2px solid #ffedd5;">
+        <h3>📁 [2단계] 대량 등록 (엑셀 파일 올리기)</h3>
+        <button class="btn btn-template" onclick="generateAndDownloadTemplate()">📊 대량 등록용 엑셀 양식 다운로드 받기</button>
+        
+        <div class="file-input-wrapper" style="margin-top: 5px;">
+            <button class="btn btn-orange">📊 컴퓨터에 있는 엑셀 파일 선택하기</button>
+            <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" onchange="importExcel(event)">
+        </div>
+        <p style="font-size: 14px; color: #666; margin-top: 5px; margin-bottom: 0;">※ 다운로드한 양식 파일에 데이터를 채운 뒤 업로드해 주세요.</p>
+    </div>
+
+    <div class="section" id="inputFormSection" style="border: 2px solid #e2e8f0;">
+        <div class="toggle-title-container" onclick="toggleFormLayout()">
+            <h3 id="formTitle">📍 또는 직접 주소 하나씩 등록하기</h3>
+            <button class="btn-toggle-view" id="foldBtn">▲ 접기</button>
+        </div>
+        
+        <div id="formBodyContainer" style="display: block; margin-top: 15px;">
+            <div class="form-group">
+                <label>접수 일자</label>
+                <input type="date" id="regDate">
+            </div>
+            <div class="form-group">
+                <label>행정동 직접 지정 및 수정</label>
+                <input type="text" id="dongInput" placeholder="직접 수정하거나 비워두시면 지도 주소 기반으로 자동 인식됩니다.">
+            </div>
+            <div class="form-group">
+                <label>접수자 이름</label>
+                <input type="text" id="receiverName" placeholder="예: 이서기">
+            </div>
+            <div class="form-group">
+                <label>배정할 팀 이름 (수정 가능)</label>
+                <input type="text" id="assignedTeam" placeholder="예: 방역 1팀">
+            </div>
+            <div class="form-group">
+                <label>신청자 이름</label>
+                <input type="text" id="applicantName" placeholder="이름 입력">
+            </div>
+            <div class="form-group">
+                <label>전화번호</label>
+                <input type="text" id="applicantPhone" placeholder="전화번호 입력">
+            </div>
+            <div class="form-group">
+                <label>방역할 주소</label>
+                <input type="text" id="quarantineAddress" placeholder="정확한 주소 입력 (예: 서울 광진구 능동로 120)">
+            </div>
+            
+            <div class="form-group">
+                <label>해충 종류 (여러 개 선택 가능)</label>
+                <div class="pest-group">
+                    <label class="pest-item"><input type="checkbox" name="pestType" value="러브버그"> 러브버그</label>
+                    <label class="pest-item"><input type="checkbox" name="pestType" value="바퀴벌레"> 바퀴벌레</label>
+                    <label class="pest-item"><input type="checkbox" name="pestType" value="모기"> 모기</label>
+                    <label class="pest-item"><input type="checkbox" name="pestType" value="동양하루살이"> 동양하루살이</label>
+                    <label class="pest-item">
+                        <input type="checkbox" name="pestType" value="기타" id="pestOtherChk" onchange="togglePestOther()"> 기타
+                    </label>
+                    <input type="text" id="pestOtherText" placeholder="여기에 해충명 입력">
+                </div>
+            </div>
+
+            <div class="manual-status-group">
+                <h4 style="margin: 0 0 10px 0; color: #0284c7;">⚙️ 방역 진행 상태 수동 설정 (필요시 고치세요)</h4>
+                <div class="form-group">
+                    <label style="font-size: 16px;">방역 진행 상태</label>
+                    <select id="manualStatus">
+                        <option value="대기중">대기중</option>
+                        <option value="완료">완료</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="font-size: 16px;">완료 날짜 및 시간</label>
+                    <input type="text" id="manualTime" placeholder="미완료 시 하이픈(-) 입력">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 16px;">완료자 이름 (현장 작업자)</label>
+                    <input type="text" id="manualOperator" placeholder="미완료 시 하이픈(-) 입력">
+                </div>
+            </div>
+            
+            <button class="btn btn-blue" id="submitBtn" onclick="addLocation()">＋ 명단에 한 개 추가하기</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>📋 [3단계] 방역 관리 대상 명단</h3>
+        
+        <div class="filter-dashboard">
+            <div class="filter-controls">
+                <div>
+                    <span style="font-weight: bold; color: #1e3a8a;">👥 팀별:</span>
+                    <select id="teamFilter" onchange="renderTable()" style="width: 120px; padding: 6px; font-size: 16px; border: 2px solid #1e3a8a; border-radius: 6px;">
+                        <option value="ALL">전체 보기</option>
+                    </select>
+                </div>
+                <div>
+                    <span style="font-weight: bold; color: #1e3a8a;">📅 날짜별:</span>
+                    <select id="dateFilter" onchange="renderTable()" style="width: 120px; padding: 6px; font-size: 16px; border: 2px solid #1e3a8a; border-radius: 6px;">
+                        <option value="ALL">전체 보기</option>
+                    </select>
+                </div>
+                <div>
+                    <span style="font-weight: bold; color: #1e3a8a;">🏡 행정동:</span>
+                    <select id="dongFilter" onchange="renderTable()" style="width: 120px; padding: 6px; font-size: 16px; border: 2px solid #1e3a8a; border-radius: 6px;">
+                        <option value="ALL">전체 보기</option>
+                    </select>
+                </div>
+                <div>
+                    <span style="font-weight: bold; color: #1e3a8a;">⏱️ 상태별:</span>
+                    <select id="statusFilter" onchange="renderTable()" style="width: 120px; padding: 6px; font-size: 16px; border: 2px solid #1e3a8a; border-radius: 6px;">
+                        <option value="ALL">전체 보기</option>
+                    </select>
+                </div>
+                <div>
+                    <span style="font-weight: bold; color: #ea580c;">🔍 주소 검색:</span>
+                    <input type="text" id="addressSearch" oninput="renderTable()" placeholder="주소 일부 입력..." style="width: 160px; padding: 6px; font-size: 16px; border: 2px solid #ea580c; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+            <div style="font-weight: bold; font-size: 16px;">
+                일치 건수: <span id="filteredCount" class="count-badge">0건</span>
+            </div>
+        </div>
+        
+        <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <div style="flex: 1;">
+                <label style="font-size: 16px; color: #1e3a8a; font-weight: bold;">📊 명단 나열 순서 선택</label>
+                <select id="sortOrder" onchange="renderTable()" style="border: 2px solid #0284c7;">
+                    <option value="default">접수일자 오래된 순 + 행정동 묶음 (기본)</option>
+                    <option value="newest">접수일자 최신 순</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn btn-map" onclick="viewAllMarkers()">🗺️ 카카오 지도로 한눈에 모아보기 (기본/추천 · 500개+ 가능)</button>
+        <button class="btn" style="background-color:#16a34a; color:#fff; margin-top:8px;" onclick="viewGoogleMap()">🟢 구글 지도로 보기 (백업 · 최대 10곳)</button>
+        <p style="font-size:13px; color:#666; margin-top:6px; margin-bottom:0;">※ 평소엔 <b>카카오</b> 버튼을 쓰세요(한국 주소 정확·다량 표시). 카카오가 안 뜰 때만 <b>구글</b> 백업을 누르면 됩니다.</p>
+        <div id="multiMap"></div>
+        
+        <button class="btn btn-green" style="margin-top: 15px;" onclick="exportToExcel()">📊 현재 명단 엑셀 파일로 백업(다운로드)</button>
+        
+        <div class="responsive-table-wrapper" style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">순번</th>
+                        <th style="width: 100px;">접수일자</th>
+                        <th style="width: 100px;">배정팀</th>
+                        <th style="width: 100px;">행정동</th>
+                        <th style="width: 90px;">접수자</th>
+                        <th style="width: 140px;">신청자 정보</th>
+                        <th>방역 주소 (지도)</th>
+                        <th style="width: 150px;">해충 종류</th>
+                        <th style="width: 80px;">상태</th>
+                        <th style="width: 140px;">완료 일시</th>
+                        <th style="width: 90px;">완료자</th>
+                        <th style="width: 180px;">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="locationTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let totalList = [];
+        let isStorageValid = true;
+        let editIndex = -1;
+        let geocoder;
+
+        window.onload = function() {
+            document.getElementById('regDate').value = new Date().toISOString().slice(0,10);
+            document.getElementById('manualStatus').value = '대기중';
+            document.getElementById('manualTime').value = '-';
+            document.getElementById('manualOperator').value = '-';
+
+            if (typeof kakao !== 'undefined' && kakao.maps && kakao.maps.services) {
+                geocoder = new kakao.maps.services.Geocoder();
+            }
+
+            try {
+                const savedData = localStorage.getItem('quarantineNaverV3');
+                const savedTeam = localStorage.getItem('savedTeamNaverV3');
+                const savedOperator = localStorage.getItem('savedOperatorNaverV3');
+                if (savedData) { totalList = JSON.parse(savedData); }
+                if (savedTeam) { document.getElementById('teamName').value = savedTeam; }
+                if (savedOperator) { document.getElementById('todayOperator').value = savedOperator; }
+            } catch (e) {
+                isStorageValid = false;
+            }
+            updateFilterOptions();
+            renderTable();
+        }
+
+        function toggleFormLayout() {
+            const container = document.getElementById('formBodyContainer');
+            const btn = document.getElementById('foldBtn');
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                btn.innerText = '▲ 접기';
+            } else {
+                container.style.display = 'none';
+                btn.innerText = '▼ 펼치기';
+            }
+        }
+
+        function generateAndDownloadTemplate() {
+            const headers = [["순번", "접수일자", "행정동", "접수자", "팀명", "신청자명", "전화번호", "방역주소", "해충종류", "상태", "완료시간", "완료자"]];
+            const sampleRow = [["1", "2026-06-25", "", "이서기", "방역 1팀", "홍길동", "[PHONE_NUMBER]", "서울 광진구 능동로 120", "러브버그", "대기중", "-", "-"]];
+            const fullSheetData = headers.concat(sampleRow);
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(fullSheetData);
+            XLSX.utils.book_append_sheet(wb, ws, "대량등록양식");
+            XLSX.writeFile(wb, "방역관리_대량등록_양식.xlsx");
+        }
+
+        function cleanPhone(phone) {
+            if (!phone) return '번호없음';
+            let str = String(phone).replace(/[^0-9]/g, '').trim();
+            if (str.startsWith('10') && (str.length === 10 || str.length === 9)) {
+                str = '0' + str;
+            }
+            if (str.length === 11 && str.startsWith('010')) {
+                return str.substring(0,3) + '-' + str.substring(3,7) + '-' + str.substring(7,11);
+            } else if (str.length === 10 && str.startsWith('010')) {
+                return str.substring(0,3) + '-' + str.substring(3,6) + '-' + str.substring(6,10);
+            }
+            return String(phone).trim();
+        }
+
+        function saveToStorage() {
+            if (!isStorageValid) return;
+            try {
+                localStorage.setItem('quarantineNaverV3', JSON.stringify(totalList));
+                localStorage.setItem('savedTeamNaverV3', document.getElementById('teamName').value.trim());
+                localStorage.setItem('savedOperatorNaverV3', document.getElementById('todayOperator').value.trim());
+            } catch (e) { }
+        }
+
+        function updateFilterOptions() {
+            const teamSelect = document.getElementById('teamFilter');
+            const dateSelect = document.getElementById('dateFilter');
+            const dongSelect = document.getElementById('dongFilter');
+            const statusSelect = document.getElementById('statusFilter');
+            
+            const currentSelectedTeam = teamSelect.value;
+            const currentSelectedDate = dateSelect.value;
+            const currentSelectedDong = dongSelect.value;
+            const currentSelectedStatus = statusSelect.value;
+            
+            teamSelect.innerHTML = '<option value="ALL">전체 보기</option>';
+            dateSelect.innerHTML = '<option value="ALL">전체 보기</option>';
+            dongSelect.innerHTML = '<option value="ALL">전체 보기</option>';
+            statusSelect.innerHTML = '<option value="ALL">전체 보기</option>';
+            
+            let teams = [];
+            let dates = [];
+            let dongs = [];
+            let statuses = [];
+            
+            for (let i = 0; i < totalList.length; i++) {
+                let tName = totalList[i].team || '미지정';
+                let dName = totalList[i].regDate;
+                let dgName = totalList[i].dong || '기타';
+                let sName = totalList[i].status || '대기중';
+                
+                if (teams.indexOf(tName) === -1) { teams.push(tName); }
+                if (dates.indexOf(dName) === -1) { dates.push(dName); }
+                if (dongs.indexOf(dgName) === -1) { dongs.push(dgName); }
+                if (statuses.indexOf(sName) === -1) { statuses.push(sName); }
+            }
+            
+            teams.sort();
+            dates.sort(function(a, b){ return a.localeCompare(b); });
+            dongs.sort();
+            statuses.sort();
+            
+            for (let j = 0; j < teams.length; j++) {
+                let opt = document.createElement('option'); opt.value = teams[j]; opt.innerText = teams[j]; teamSelect.appendChild(opt);
+            }
+            for (let k = 0; k < dates.length; k++) {
+                let opt = document.createElement('option'); opt.value = dates[k]; opt.innerText = dates[k]; dateSelect.appendChild(opt);
+            }
+            for (let m = 0; m < dongs.length; m++) {
+                let opt = document.createElement('option'); opt.value = dongs[m]; opt.innerText = dongs[m]; dongSelect.appendChild(opt);
+            }
+            for (let n = 0; n < statuses.length; n++) {
+                let opt = document.createElement('option'); opt.value = statuses[n]; opt.innerText = statuses[n]; statusSelect.appendChild(opt);
+            }
+            
+            teamSelect.value = currentSelectedTeam || 'ALL';
+            dateSelect.value = currentSelectedDate || 'ALL';
+            dongSelect.value = currentSelectedDong || 'ALL';
+            statusSelect.value = currentSelectedStatus || 'ALL';
+        }
+
+        function togglePestOther() {
+            const chk = document.getElementById('pestOtherChk');
+            const txt = document.getElementById('pestOtherText');
+            if (chk.checked) { txt.style.display = 'inline-block'; txt.focus(); } 
+            else { txt.style.display = 'none'; txt.value = ''; }
+        }
+
+        function parsePests(pestString) {
+            if(!pestString) return [];
+            return pestString.split(',').map(function(p) { return p.trim(); });
+        }
+
+        function formatExcelDate(excelValue) {
+            if (!excelValue) return new Date().toISOString().slice(0,10);
+            if (!isNaN(excelValue) && String(excelValue).trim() !== '') {
+                const intDate = parseInt(excelValue, 10);
+                const dateObj = new Date((intDate - 25569) * 24 * 60 * 60 * 1000);
+                const yyyy = dateObj.getFullYear();
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                return yyyy + '-' + mm + '-' + dd;
+            }
+            return String(excelValue).trim();
+        }
+
+        function fetchDongFromAddress(address, callback) {
+            function textFallback(addr) {
+                const match = addr.match(/([가-힣]{2,4}\d?동)/);
+                return match ? match[1] : '기타';
+            }
+            if (!geocoder) {
+                callback(textFallback(address));
+                return;
+            }
+            const words = address.split(' ');
+            let cleanAddress = address;
+            if (words.length > 4) { cleanAddress = words.slice(0, 4).join(' '); }
+
+            geocoder.addressSearch(cleanAddress, function(result, status) {
+                if (status === kakao.maps.services.Status.OK && result.length > 0) {
+                    let regionDong = result[0].address.region_3depth_name;
+                    if (!regionDong && result[0].road_address) { regionDong = result[0].road_address.region_3depth_name; }
+                    callback(regionDong || textFallback(address));
+                } else {
+                    geocoder.addressSearch(address, function(result2, status2) {
+                        if (status2 === kakao.maps.services.Status.OK && result2.length > 0) {
+                            let regionDong2 = result2[0].address.region_3depth_name;
+                            if (!regionDong2 && result2[0].road_address) { regionDong2 = result2[0].road_address.region_3depth_name; }
+                            callback(regionDong2 || textFallback(address));
+                        } else { callback(textFallback(address)); }
+                    });
+                }
+            });
+        }
+
+        function importExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(worksheet);
+                
+                if(rows.length === 0) { alert('데이터가 없습니다.'); return; }
+
+                const loadingAlert = document.createElement('div');
+                loadingAlert.style = "position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.8); color:white; padding:20px 40px; border-radius:10px; font-weight:bold; z-index:9999; font-size:20px; text-align:center;";
+                loadingAlert.innerHTML = "🔄 카카오 주소 데이터 정밀 분석 중...<br><span style='font-size:14px; color:#cbd5e1;'>주소량이 많으면 수 초가 걸릴 수 있습니다.</span>";
+                document.body.appendChild(loadingAlert);
+
+                function processRow(row) {
+                    return new Promise((resolve) => {
+                        const address = row['방역주소'] || row['주소'] || '';
+                        if (address) {
+                            fetchDongFromAddress(String(address).trim(), function(detectedDong) {
+                                const fileDong = row['행정동'] || detectedDong;
+                                const cleanDate = formatExcelDate(row['접수일자']);
+
+                                totalList.push({
+                                    regDate: cleanDate,
+                                    receiver: String(row['접수자'] || '-').trim(),
+                                    team: String(row['팀명'] || row['배정팀'] || '미지정').trim(),
+                                    dong: String(fileDong).trim(),
+                                    name: String(row['신청자명'] || '이름없음').trim(),
+                                    phone: cleanPhone(row['전화번호']),
+                                    address: String(address).trim(),
+                                    pests: parsePests(row['해충종류']),
+                                    status: row['상태'] || '대기중',
+                                    completedTime: row['완료시간'] || '-',
+                                    operator: row['완료자'] || row['담당자'] || '-'
+                                });
+                                resolve();
+                            });
+                        } else { resolve(); }
+                    });
+                }
+
+                for (let i = 0; i < rows.length; i++) {
+                    await processRow(rows[i]);
+                    if (i % 5 === 0) { await new Promise(r => setTimeout(r, 40)); }
+                }
+
+                document.body.removeChild(loadingAlert);
+                saveToStorage();
+                updateFilterOptions();
+                renderTable();
+                alert("총 " + rows.length + "개 데이터 누락 없이 완벽 매핑 일괄 등록 완료!");
+                event.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function addLocation() {
+            const regDate = document.getElementById('regDate').value;
+            const receiver = document.getElementById('receiverName').value.trim();
+            const team = document.getElementById('assignedTeam').value.trim() || '미지정';
+            const name = document.getElementById('applicantName').value.trim();
+            const phone = document.getElementById('applicantPhone').value.trim();
+            const address = document.getElementById('quarantineAddress').value.trim();
+            let manualDong = document.getElementById('dongInput').value.trim();
+
+            const checkboxes = document.querySelectorAll('input[name="pestType"]:checked');
+            let pests = [];
+            for (let i = 0; i < checkboxes.length; i++) {
+                const cb = checkboxes[i];
+                if (cb.value === '기타') {
+                    const otherVal = document.getElementById('pestOtherText').value.trim();
+                    pests.push(otherVal ? "기타(" + otherVal + ")" : '기타');
+                } else { pests.push(cb.value); }
+            }
+
+            if (!name || !phone || !address || !receiver) { alert('접수자, 신청자 정보, 주소를 모두 입력해주세요.'); return; }
+            if (pests.length === 0) { alert('해충 종류를 최소 한 개 이상 선택해주세요.'); return; }
+
+            const status = document.getElementById('manualStatus').value;
+            const completedTime = document.getElementById('manualTime').value.trim();
+            const operator = document.getElementById('manualOperator').value.trim();
+
+            fetchDongFromAddress(address, function(autoDong) {
+                const finalDong = manualDong || autoDong;
+
+                totalList.push({
+                    regDate: regDate, receiver: receiver, team: team, dong: finalDong,
+                    name: name, phone: cleanPhone(phone), address: address, pests: pests,
+                    status: status, completedTime: completedTime, operator: operator
+                });
+
+                saveToStorage();
+                updateFilterOptions();
+                renderTable();
+                resetForm();
+            });
+        }
+
+        function startEdit(index) {
+            editIndex = index;
+            const item = totalList[index];
+            
+            const container = document.getElementById('formBodyContainer');
+            const btn = document.getElementById('foldBtn');
+            container.style.display = 'block';
+            btn.innerText = '▲ 접기';
+
+            document.getElementById('inputFormSection').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('formTitle').innerHTML = "✏️ 명단 내용 수정하기 (" + (index + 1) + "번 명단)";
+            
+            const sBtn = document.getElementById('submitBtn');
+            sBtn.innerText = "✏️ 수정 완료하기";
+            sBtn.className = "btn btn-orange-submit";
+            sBtn.onclick = updateLocation;
+
+            document.getElementById('regDate').value = item.regDate;
+            document.getElementById('dongInput').value = item.dong;
+            document.getElementById('receiverName').value = item.receiver;
+            document.getElementById('assignedTeam').value = item.team;
+            document.getElementById('applicantName').value = item.name;
+            document.getElementById('applicantPhone').value = item.phone;
+            document.getElementById('quarantineAddress').value = item.address;
+
+            document.getElementById('manualStatus').value = item.status;
+            document.getElementById('manualTime').value = item.completedTime;
+            document.getElementById('manualOperator').value = item.operator;
+
+            const allCbs = document.querySelectorAll('input[name="pestType"]');
+            for (let j = 0; j < allCbs.length; j++) { allCbs[j].checked = false; }
+            document.getElementById('pestOtherText').value = '';
+            document.getElementById('pestOtherText').style.display = 'none';
+
+            for (let i = 0; i < item.pests.length; i++) {
+                const pestVal = item.pests[i];
+                if (pestVal.indexOf('기타') === 0) {
+                    document.getElementById('pestOtherChk').checked = true;
+                    document.getElementById('pestOtherText').style.display = 'inline-block';
+                    if (pestVal.includes('(')) {
+                        document.getElementById('pestOtherText').value = pestVal.replace('기타(', '').replace(')', '');
+                    }
+                } else {
+                    const targetCb = document.querySelector(`input[name="pestType"][value="${pestVal}"]`);
+                    if (targetCb) targetCb.checked = true;
+                }
+            }
+        }
+
+        function updateLocation() {
+            if (editIndex === -1) return;
+            const regDate = document.getElementById('regDate').value;
+            const receiver = document.getElementById('receiverName').value.trim();
+            const team = document.getElementById('assignedTeam').value.trim() || '미지정';
+            const name = document.getElementById('applicantName').value.trim();
+            const phone = document.getElementById('applicantPhone').value.trim();
+            const address = document.getElementById('quarantineAddress').value.trim();
+            let manualDong = document.getElementById('dongInput').value.trim();
+
+            const checkboxes = document.querySelectorAll('input[name="pestType"]:checked');
+            let pests = [];
+            for (let i = 0; i < checkboxes.length; i++) {
+                const cb = checkboxes[i];
+                if (cb.value === '기타') {
+                    const otherVal = document.getElementById('pestOtherText').value.trim();
+                    pests.push(otherVal ? "기타(" + otherVal + ")" : '기타');
+                } else { pests.push(cb.value); }
+            }
+
+            if (!name || !phone || !address || !receiver) { alert('모든 정보를 입력해주세요.'); return; }
+            if (pests.length === 0) { alert('해충 종류를 최소 한 개 이상 선택해주세요.'); return; }
+
+            fetchDongFromAddress(address, function(autoDong) {
+                const finalDong = manualDong || autoDong;
+
+                totalList[editIndex].regDate = regDate;
+                totalList[editIndex].receiver = receiver;
+                totalList[editIndex].team = team;
+                totalList[editIndex].dong = finalDong;
+                totalList[editIndex].name = name;
+                totalList[editIndex].phone = cleanPhone(phone);
+                totalList[editIndex].address = address;
+                totalList[editIndex].pests = pests;
+                totalList[editIndex].status = document.getElementById('manualStatus').value;
+                totalList[editIndex].completedTime = document.getElementById('manualTime').value.trim();
+                totalList[editIndex].operator = document.getElementById('manualOperator').value.trim();
+
+                saveToStorage();
+                updateFilterOptions();
+                renderTable();
+                resetForm();
+                alert("성공적으로 수정 완료되었습니다.");
+            });
+        }
+
+        function resetForm() {
+            editIndex = -1;
+            document.getElementById('formTitle').innerHTML = "📍 또는 직접 주소 하나씩 등록하기";
+            const sBtn = document.getElementById('submitBtn');
+            sBtn.innerText = "＋ 명단에 한 개 추가하기";
+            sBtn.className = "btn btn-blue";
+            sBtn.onclick = addLocation;
+
+            document.getElementById('dongInput').value = '';
+            document.getElementById('receiverName').value = '';
+            document.getElementById('assignedTeam').value = '';
+            document.getElementById('applicantName').value = '';
+            document.getElementById('applicantPhone').value = '';
+            document.getElementById('quarantineAddress').value = '';
+            document.getElementById('pestOtherText').value = '';
+            document.getElementById('pestOtherText').style.display = 'none';
+            
+            document.getElementById('manualStatus').value = '대기중';
+            document.getElementById('manualTime').value = '-';
+            document.getElementById('manualOperator').value = '-';
+
+            const allCbs = document.querySelectorAll('input[name="pestType"]');
+            for (let j = 0; j < allCbs.length; j++) { allCbs[j].checked = false; }
+        }
+
+        // [★개정 반영] 4중 필터 시스템 + 텍스트 주소 실시간 매칭 복합 렌더링 가동
+        function renderTable() {
+            const tbody = document.getElementById('locationTableBody');
+            tbody.innerHTML = '';
+            const order = document.getElementById('sortOrder').value;
+            
+            const teamFilterTarget = document.getElementById('teamFilter').value;
+            const dateFilterTarget = document.getElementById('dateFilter').value;
+            const dongFilterTarget = document.getElementById('dongFilter').value;
+            const statusFilterTarget = document.getElementById('statusFilter').value;
+            
+            // 주소 텍스트 검색어 로드 (소문자 및 오차 공백 제거 매핑)
+            const searchTarget = document.getElementById('addressSearch').value.trim().toLowerCase();
+
+            if (order === 'default') {
+                totalList.sort(function(a, b) {
+                    let dateCompare = a.regDate.localeCompare(b.regDate);
+                    if (dateCompare !== 0) { return dateCompare; }
+                    return a.dong.localeCompare(b.dong);
+                });
+            } else if (order === 'newest') {
+                totalList.sort(function(a, b){ return b.regDate.localeCompare(a.regDate); });
+            }
+
+            let viewCount = 0;
+
+            for (let i = 0; i < totalList.length; i++) {
+                const item = totalList[i];
+                
+                if (teamFilterTarget !== 'ALL' && item.team !== teamFilterTarget) { continue; }
+                if (dateFilterTarget !== 'ALL' && item.regDate !== dateFilterTarget) { continue; }
+                if (dongFilterTarget !== 'ALL' && item.dong !== dongFilterTarget) { continue; }
+                if (statusFilterTarget !== 'ALL' && item.status !== statusFilterTarget) { continue; }
+                
+                // ★ 주소 일부 포함 검증 필터링 가동
+                if (searchTarget && item.address.toLowerCase().indexOf(searchTarget) === -1) { continue; }
+
+                viewCount++;
+                const tr = document.createElement('tr');
+                const mapUrl = "https://map.kakao.com/?q=" + encodeURIComponent(item.address);
+                
+                let pestTags = "";
+                for (let j = 0; j < item.pests.length; j++) {
+                    pestTags += '<span class="pest-tag">' + item.pests[j] + '</span>';
+                }
+
+                tr.innerHTML = `
+                    <td data-label="순번" style="text-align:center; font-weight:bold;">${viewCount}</td>
+                    <td data-label="접수일자" style="font-size:14px;">${item.regDate}</td>
+                    <td data-label="배정팀" style="color:#1e3a8a; font-weight:bold;">${item.team || '미지정'}</td>
+                    <td data-label="행정동"><span class="badge badge-dong">${item.dong}</span></td>
+                    <td data-label="접수자">${item.receiver}</td>
+                    <td data-label="신청자"><strong>${item.name}</strong><br><span style="font-size:13px; color:#555;">${item.phone}</span></td>
+                    <td data-label="방역주소">${item.address}<br><a href="${mapUrl}" target="_blank" class="map-btn">🌐 카카오 지도</a></td>
+                    <td data-label="해충종류">${pestTags}</td>
+                    <td data-label="상태" style="text-align:center;"><span class="badge ${item.status === '대기중' ? 'badge-wait' : 'badge-done'}">${item.status}</span></td>
+                    <td data-label="완료일시" style="font-size:14px; color:#555;">${item.completedTime}</td>
+                    <td data-label="완료자" style="font-weight:bold;">${item.operator}</td>
+                    <td data-label="관리" style="text-align:center;">
+                        ${item.status === '대기중' ? `<button class="btn btn-action" onclick="completeTask(${i})">완료</button>` : `<span style="color:#16a34a; font-weight:bold; margin-right:5px;">✓ 끝</span>`}
+                        <button class="btn-edit" onclick="startEdit(${i})">✏️ 수정</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('filteredCount').innerText = viewCount + "건";
+            
+            if (viewCount === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:20px;">조건에 일치하는 데이터 명단이 없습니다.</td></tr>';
+            }
+        }
+
+        function completeTask(index) {
+            const team = document.getElementById('teamName').value.trim();
+            const operator = document.getElementById('todayOperator').value.trim();
+            if (!team || !operator) { alert('[1단계] 칸에 팀명과 방역 완료자 이름을 먼저 입력해 주세요!'); return; }
+
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            
+            totalList[index].status = '완료';
+            totalList[index].completedTime = yyyy + "-" + mm + "-" + dd + " " + hh + ":" + min;
+            totalList[index].operator = operator;
+            
+            saveToStorage();
+            updateFilterOptions();
+            renderTable();
+        }
+
+        // [★개정 반영] 주소 검색창에 입력한 결과값까지 실시간 지도 핀에 반영되도록 최적화
+        function viewAllMarkers() {
+            const teamFilterTarget = document.getElementById('teamFilter').value;
+            const dateFilterTarget = document.getElementById('dateFilter').value;
+            const dongFilterTarget = document.getElementById('dongFilter').value;
+            const statusFilterTarget = document.getElementById('statusFilter').value;
+            const searchTarget = document.getElementById('addressSearch').value.trim().toLowerCase();
+            
+            let filteredMarkers = [];
+            for(let i=0; i<totalList.length; i++) {
+                if(teamFilterTarget !== 'ALL' && totalList[i].team !== teamFilterTarget) { continue; }
+                if(dateFilterTarget !== 'ALL' && totalList[i].regDate !== dateFilterTarget) { continue; }
+                if(dongFilterTarget !== 'ALL' && totalList[i].dong !== dongFilterTarget) { continue; }
+                if(statusFilterTarget !== 'ALL' && totalList[i].status !== statusFilterTarget) { continue; }
+                
+                // 검색어 반영 필터링 장치
+                if (searchTarget && totalList[i].address.toLowerCase().indexOf(searchTarget) === -1) { continue; }
+                
+                filteredMarkers.push(totalList[i]);
+            }
+
+            if (filteredMarkers.length === 0) { alert('지도에 표시할 주소가 없습니다.'); return; }
+            if (typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.services || !geocoder) {
+                if (confirm('카카오 지도를 불러오지 못했습니다.\n(아직 카카오 키/도메인 등록 전이거나 네트워크 문제)\n\n대신 구글 지도(백업, 최대 10곳)로 열까요?')) {
+                    viewGoogleMap();
+                }
+                return;
+            }
+
+            const mapContainer = document.getElementById('multiMap');
+            mapContainer.style.display = 'block';
+            const map = new kakao.maps.Map(mapContainer, { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 5 });
+            const bounds = new kakao.maps.LatLngBounds(); 
+            let count = 0;
+
+            filteredMarkers.forEach(function(item) {
+                geocoder.addressSearch(item.address, function(result, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+                        const marker = new kakao.maps.Marker({ map: map, position: coords });
+                        
+                        const infowindow = new kakao.maps.InfoWindow({
+                            content: '<div style="padding:5px;font-size:13px;text-align:center;width:160px;"><b>' + item.name + '</b> [' + item.dong + ']<br>' + item.team + ' / ' + item.status + '</div>'
+                        });
+                        infowindow.open(map, marker);
+                        
+                        bounds.extend(coords);
+                        count++;
+                        if(count === filteredMarkers.length) { map.setBounds(bounds); }
+                    }
+                });
+            });
+        }
+
+        // [백업용] 구글 지도로 현재 필터링된 주소를 한 화면에 표시 (키/도메인 등록 불필요, 어디서나 작동)
+        function viewGoogleMap() {
+            const teamFilterTarget = document.getElementById('teamFilter').value;
+            const dateFilterTarget = document.getElementById('dateFilter').value;
+            const dongFilterTarget = document.getElementById('dongFilter').value;
+            const statusFilterTarget = document.getElementById('statusFilter').value;
+            const searchTarget = document.getElementById('addressSearch').value.trim().toLowerCase();
+
+            let addrs = [];
+            for (let i = 0; i < totalList.length; i++) {
+                if (teamFilterTarget !== 'ALL' && totalList[i].team !== teamFilterTarget) { continue; }
+                if (dateFilterTarget !== 'ALL' && totalList[i].regDate !== dateFilterTarget) { continue; }
+                if (dongFilterTarget !== 'ALL' && totalList[i].dong !== dongFilterTarget) { continue; }
+                if (statusFilterTarget !== 'ALL' && totalList[i].status !== statusFilterTarget) { continue; }
+                if (searchTarget && totalList[i].address.toLowerCase().indexOf(searchTarget) === -1) { continue; }
+                if (totalList[i].address && totalList[i].address.trim() !== '') { addrs.push(totalList[i].address.trim()); }
+            }
+
+            if (addrs.length === 0) { alert('지도에 표시할 주소가 없습니다.'); return; }
+
+            // 구글 길찾기 URL은 한 번에 최대 10곳까지만 지원
+            let limited = addrs;
+            if (addrs.length > 10) {
+                alert('구글 지도(백업)는 한 번에 최대 10곳까지만 표시됩니다.\n현재 ' + addrs.length + '곳 중 앞 10곳만 표시합니다.\n\n전체를 한 화면에 보려면 카카오 지도 버튼을 사용하세요.');
+                limited = addrs.slice(0, 10);
+            }
+
+            // 첫 곳=출발, 마지막 곳=도착, 나머지=경유지 형태로 한 화면에 펼침
+            let url;
+            if (limited.length === 1) {
+                url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(limited[0]);
+            } else {
+                const origin = encodeURIComponent(limited[0]);
+                const destination = encodeURIComponent(limited[limited.length - 1]);
+                const waypoints = limited.slice(1, limited.length - 1).map(function(a) { return encodeURIComponent(a); }).join('|');
+                url = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + destination;
+                if (waypoints) { url += '&waypoints=' + waypoints; }
+            }
+            window.open(url, '_blank');
+        }
+
+        function exportToExcel() {
+            if (totalList.length === 0) { alert('저장할 데이터가 없습니다.'); return; }
+            const team = document.getElementById('teamName').value.trim() || '통합팀';
+            let csvContent = "\ufeff" + "순번,접수일자,행정동,접수자,팀명,신청자명,전화번호,방역주소,해충종류,상태,완료시간,완료자\n";
+            
+            for (let i = 0; i < totalList.length; i++) {
+                const item = totalList[i];
+                csvContent += (i + 1) + "," + item.regDate + ',"' + item.dong + '","' + item.receiver + '","' + item.team + '","' + item.name + '","' + item.phone + '","' + item.address + '","' + item.pests.join('/') + '","' + item.status + '","' + item.completedTime + '","' + item.operator + '"\n';
+            }
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.setAttribute("href", URL.createObjectURL(blob));
+            link.setAttribute("download", "방역최종보고서_" + team + "_" + new Date().toISOString().slice(0,10) + ".csv");
+            link.click();
+        }
+
+        function clearAllData() {
+            if (confirm('모든 명단이 삭제됩니다. 정말 초기화하시겠습니까?')) {
+                localStorage.removeItem('quarantineNaverV3');
+                totalList = [];
+                resetForm();
+                updateFilterOptions();
+                renderTable();
+                document.getElementById('multiMap').style.display = 'none';
+                alert('초기화 완료.');
+            }
+        }
+        document.getElementById('teamName').addEventListener('input', saveToStorage);
+        document.getElementById('todayOperator').addEventListener('input', saveToStorage);
+    </script>
+
+    <!-- ===================== 카카오 지도 키 설정 (★중요) =====================
+         아래 appkey=... 뒤의 값(2c9d4e55...)을 "본인 카카오 JavaScript 키"로 바꾸세요.
+         발급: https://developers.kakao.com → 내 애플리케이션 → JavaScript 키 복사
+         그리고 카카오 콘솔 [앱 설정 ▸ 플랫폼 ▸ Web ▸ 사이트 도메인]에
+         이 앱의 주소(예: https://blueeming.github.io)를 등록해야 카카오 지도가 작동합니다.
+         (등록 전에는 자동으로 구글 지도 백업이 안내됩니다)
+    ========================================================================= -->
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=2c9d4e55dc16e9d72f62d641eea5eec9&libraries=services"></script>
+</body>
+</html>
